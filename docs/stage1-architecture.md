@@ -97,7 +97,7 @@ sequenceDiagram
     participant Loader as DataLoader
     participant Dataset as LMDataset
     participant Model as TinyLM
-    participant Opt as AdamW + Scheduler
+    participant Optimizer as AdamW + Scheduler
     participant Disk as metrics.jsonl + checkpoint
 
     Train->>Loader: next(train_iterator)
@@ -111,7 +111,7 @@ sequenceDiagram
     Model->>Model: lm_head → logits [B, T, V]
     Model-->>Train: logits [32, 128, 50257], cross-entropy loss scalar
     Train->>Model: loss.backward()
-    Train->>Opt: clip gradients, optimizer.step(), scheduler.step()
+    Train->>Optimizer: clip gradients, optimizer.step(), scheduler.step()
     Train->>Disk: append metrics; periodically save complete state
 ```
 
