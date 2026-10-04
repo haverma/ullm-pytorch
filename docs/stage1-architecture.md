@@ -112,7 +112,35 @@ sequenceDiagram
     Model-->>Train: logits [32, 128, 50257], cross-entropy loss scalar
     Train->>Model: loss.backward()
     Train->>Optimizer: clip gradients, optimizer.step(), scheduler.step()
-    Train->>Disk: append metrics; periodically save complete state
+    Train->>Disk: append metrics and periodically save complete state
+```
+
+## End-to-end training flow
+
+```mermaid
+flowchart TD
+    A["train.py: parse arguments, select device, seed randomness"]
+    B["data.py: download_and_tokenize"]
+    C["Tiny Shakespeare text"]
+    D["GPT-2 BPE token IDs"]
+    E["data/train.bin and data/val.bin"]
+    F["data.py: LMDataset reads token IDs with np.memmap"]
+    G["data.py: DataLoader batches examples"]
+    H["input_tokens and target_tokens<br/>torch.long [B, T] = [32, 128]"]
+    I["model.py: TinyLM.forward"]
+    J["tok_emb plus pos_emb<br/>hidden vectors [B, T, C]"]
+    K["Transformer Blocks<br/>causal attention plus MLP"]
+    L["lm_head<br/>logits [B, T, V] = [32, 128, 50257]"]
+    M["cross_entropy(logits, target_tokens)<br/>one scalar loss"]
+    N["loss.backward<br/>gradients for embedding, attention, MLP, output weights"]
+    O["AdamW optimizer.step<br/>CosineAnnealingLR scheduler.step"]
+    P["train.py: metrics.jsonl, samples, and checkpoints"]
+
+    A --> B
+    B --> C --> D --> E --> F --> G --> H
+    A --> I
+    H --> I --> J --> K --> L --> M --> N --> O --> P
+    O -->|next batch| G
 ```
 
 ## Value legend
