@@ -9,6 +9,9 @@ A repository containing:
 `tiny-lm/ train.py model.py data.py evaluate.py configs/ baseline.yaml checkpoints/ runs/ tests/ README.md`
 It must train, evaluate, checkpoint, resume, and emit usable metrics.
 
+See [the Stage 1 class and data-flow diagram](docs/stage1-architecture.md) for
+how the three current Python modules interact.
+
 ## Run the current implementation
 
 Install PyTorch plus the small data-pipeline dependencies, then start a short
