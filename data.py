@@ -16,7 +16,8 @@ def download_and_tokenize():
     
     if not os.path.exists(INPUT_FILE):
         print("Downloading Tiny Shakespeare...")
-        response = requests.get(DATA_URL)
+        response = requests.get(DATA_URL, timeout=30)
+        response.raise_for_status()
         with open(INPUT_FILE, "w", encoding="utf-8") as f:
             f.write(response.text)
     else:
@@ -51,9 +52,23 @@ def download_and_tokenize():
 
 class LMDataset(Dataset):
     def __init__(self, split, seq_length):
+        if split not in {"train", "val"}:
+            raise ValueError("split must be 'train' or 'val'")
+        if seq_length <= 0:
+            raise ValueError("seq_length must be positive")
+
         self.seq_length = seq_length
         bin_file = TRAIN_BIN if split == 'train' else VAL_BIN
+        if not os.path.exists(bin_file):
+            raise FileNotFoundError(
+                f"{bin_file} does not exist. Run download_and_tokenize() first."
+            )
         self.data = np.memmap(bin_file, dtype=np.uint16, mode='r')
+        if len(self.data) <= seq_length:
+            raise ValueError(
+                f"{split} split has {len(self.data)} tokens, which is too short "
+                f"for seq_length={seq_length}."
+            )
 
     def __len__(self):
         return len(self.data) - self.seq_length
@@ -67,7 +82,11 @@ class LMDataset(Dataset):
         return x, y
 
 def get_dataloader(split='train', batch_size=32, seq_length=128, num_workers=0, seed=42):
-    torch.manual_seed(seed)
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if num_workers < 0:
+        raise ValueError("num_workers cannot be negative")
+
     dataset = LMDataset(split, seq_length)
     
     g = torch.Generator()

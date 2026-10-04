@@ -9,6 +9,24 @@ A repository containing:
 `tiny-lm/ train.py model.py data.py evaluate.py configs/ baseline.yaml checkpoints/ runs/ tests/ README.md`
 It must train, evaluate, checkpoint, resume, and emit usable metrics.
 
+## Run the current implementation
+
+Install PyTorch plus the small data-pipeline dependencies, then start a short
+CPU smoke run:
+
+```bash
+python -m pip install torch tiktoken requests numpy
+python train.py --device cpu --max-steps 10 --eval-interval 5 --checkpoint-interval 10
+```
+
+`train.py` downloads and tokenizes Tiny Shakespeare on its first run, writes
+step metrics to `runs/metrics.jsonl`, and saves complete checkpoints under
+`checkpoints/`. Resume a run with:
+
+```bash
+python train.py --resume checkpoints/step-000010.pt --max-steps 100
+```
+
 ## Saturday 1 — Make training correct
 ### 1. Set the fixed workload
 - Dataset: Tiny Shakespeare or a small fixed slice of TinyStories
