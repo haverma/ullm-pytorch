@@ -70,6 +70,22 @@ trace export. It did not execute a model forward pass, backward pass, optimizer
 step, or CUDA kernel execution test. GPU workload execution is a separate step.
 The prepared node also has `preflight/report.json` with the check results.
 
+The reusable B200 preflight script is included in the repository. Run it from
+the project directory with the environment's Python:
+
+```bash
+.venv/bin/python preflight.py
+```
+
+It requires a CUDA-visible B200 and a PyTorch build with `sm_100` support. It
+prepares data, constructs the model on CPU, verifies the weight logger using a
+controlled change to one value, and profiles five tiny CPU additions. It does
+not run the model or optimizer. Reports and diagnostic traces are written to
+`preflight/`. This directory, setup/run logs, downloaded data, checkpoints,
+training outputs, transfer archives, virtual environments, and IDE/cache files
+are generated or machine-local artifacts and are excluded by `.gitignore`.
+The script itself and `requirements.lock.txt` are version-controlled.
+
 ## Training data
 
 `train.py` automatically downloads [Tiny Shakespeare](https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt)

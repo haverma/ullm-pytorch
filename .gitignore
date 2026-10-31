@@ -13,7 +13,22 @@ data/
 checkpoints/
 runs/
 *.pt
+*.pth
+*.ckpt
+*.safetensors
 *.bin
+
+# Generated preflight reports, profiler traces, and setup/run logs
+/preflight/
+*.log
+
+# Source-transfer archives
+*.tar.gz
+*.tgz
+*.zip
+
+# Local IDE settings
+.idea/
 
 # macOS
 .DS_Store
