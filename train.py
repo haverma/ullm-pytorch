@@ -1,8 +1,7 @@
 """Train the Stage 1 decoder-only language model.
 
 This intentionally uses an explicit PyTorch training loop: the goal is to make
-every step visible before later stages add profiling, distribution, and
-orchestration.
+every step visible before later stages add distribution and orchestration.
 """
 
 from __future__ import annotations
@@ -11,6 +10,7 @@ import argparse
 import json
 import random
 import time
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +44,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume", type=Path, help="Checkpoint path to resume from")
     parser.add_argument("--sample-prompt", default="ROMEO:")
     parser.add_argument("--sample-tokens", type=int, default=80)
+    parser.add_argument("--log-interval", type=int, default=100,
+                        help="Write metrics every N steps, plus the first and final step")
+    parser.add_argument("--weight-log-interval", type=int, default=100,
+                        help="Sample weights every N steps; 0 disables weight logging")
+    parser.add_argument("--profile", action=argparse.BooleanOptionalAction, default=False,
+                        help="Capture a short PyTorch CPU/CUDA profile (default: off)")
     return parser.parse_args()
 
 
@@ -181,12 +187,78 @@ def make_train_iterator(loader: torch.utils.data.DataLoader, batches_to_skip: in
     return iterator
 
 
+def sampled_weights(model: TinyLM) -> dict[str, dict[str, Any]]:
+    """Copy only five fixed values from three representative weight tensors."""
+    names = ("tok_emb.weight", "blocks.0.attn.c_attn.weight", "blocks.0.mlp.c_fc.weight")
+    parameters = dict(model.named_parameters())
+    return {
+        name: {
+            "shape": list(parameters[name].shape),
+            "dtype": str(parameters[name].dtype),
+            "flat_indices": list(range(min(5, parameters[name].numel()))),
+            "values": parameters[name].detach().view(-1)[:5].cpu().tolist(),
+        }
+        for name in names
+    }
+
+
+def log_weights(stream, model: TinyLM, step: int, event: str,
+                baseline: dict[str, dict[str, Any]]) -> None:
+    samples = sampled_weights(model) if event == "updated" else dict(baseline)
+    for name, sample in samples.items():
+        sample = dict(sample)
+        sample["delta_from_start"] = [
+            current - initial
+            for current, initial in zip(sample["values"], baseline[name]["values"])
+        ]
+        samples[name] = sample
+    stream.write(json.dumps({"step": step, "event": event, "weights": samples}) + "\n")
+    stream.flush()
+
+
+def make_profiler(enabled: bool, device: torch.device, run_dir: Path):
+    if not enabled:
+        return nullcontext(None)
+    profile_dir = run_dir / "profiler"
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    activities = [torch.profiler.ProfilerActivity.CPU]
+    if device.type == "cuda":
+        activities.append(torch.profiler.ProfilerActivity.CUDA)
+
+    def save_profile(profiler):
+        # Unique names keep profiles from resumed/repeated runs separate.
+        stem = profile_dir / f"trace-{time.time_ns()}"
+        profiler.export_chrome_trace(str(stem.with_suffix(".json")))
+        sort_key = "self_cuda_time_total" if device.type == "cuda" else "self_cpu_time_total"
+        stem.with_suffix(".txt").write_text(
+            profiler.key_averages().table(sort_by=sort_key, row_limit=20), encoding="utf-8"
+        )
+        print(f"Saved profiler trace and summary: {stem}")
+
+    return torch.profiler.profile(
+        activities=activities,
+        # Skip one step, warm up one, capture three, then stop recording.
+        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+        on_trace_ready=save_profile,
+        record_shapes=True,
+        profile_memory=True,
+        with_stack=False,
+    )
+
+
+def profile_region(name: str, enabled: bool):
+    return torch.profiler.record_function(name) if enabled else nullcontext()
+
+
 def main() -> None:
     args = parse_args()
-    if min(args.max_steps, args.eval_interval, args.eval_batches, args.checkpoint_interval) <= 0:
+    if min(args.max_steps, args.eval_interval, args.eval_batches,
+           args.checkpoint_interval, args.log_interval) <= 0:
         raise ValueError(
-            "max_steps, eval_interval, eval_batches, and checkpoint_interval must be positive"
+            "max_steps, eval_interval, eval_batches, checkpoint_interval, and log_interval must be positive"
         )
+    if args.weight_log_interval < 0:
+        raise ValueError("weight_log_interval must be nonnegative")
 
     device = choose_device(args.device)
     seed_everything(args.seed)
@@ -234,59 +306,86 @@ def main() -> None:
     metrics_path = args.run_dir / "metrics.jsonl"
     train_iterator = make_train_iterator(train_loader, completed_steps)
     model.train()
-    started_at = time.perf_counter()
+    weight_context = (
+        (args.run_dir / "weights.jsonl").open("a", encoding="utf-8")
+        if args.weight_log_interval else nullcontext(None)
+    )
+    with weight_context as weight_file, metrics_path.open("a", encoding="utf-8") as metrics_file:
+        baseline = sampled_weights(model) if weight_file is not None else {}
+        if weight_file is not None:
+            log_weights(weight_file, model, completed_steps,
+                        "resumed" if args.resume else "initial", baseline)
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        started_at = time.perf_counter()
 
-    for step in range(completed_steps + 1, args.max_steps + 1):
-        try:
-            inputs, targets = next(train_iterator)
-        except StopIteration:
-            train_iterator = iter(train_loader)
-            inputs, targets = next(train_iterator)
+        with make_profiler(args.profile, device, args.run_dir) as profiler:
+            for step in range(completed_steps + 1, args.max_steps + 1):
+                capture_regions = args.profile and step - completed_steps <= 5
+                with profile_region("train/load_batch", capture_regions):
+                    try:
+                        inputs, targets = next(train_iterator)
+                    except StopIteration:
+                        train_iterator = iter(train_loader)
+                        inputs, targets = next(train_iterator)
 
-        inputs, targets = inputs.to(device), targets.to(device)
-        optimizer.zero_grad(set_to_none=True)
-        _, loss = model(inputs, targets)
-        assert loss is not None
-        loss.backward()
-        gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-        optimizer.step()
-        scheduler.step()
+                with profile_region("train/transfer", capture_regions):
+                    inputs, targets = inputs.to(device), targets.to(device)
+                optimizer.zero_grad(set_to_none=True)
+                with profile_region("train/forward", capture_regions):
+                    _, loss = model(inputs, targets)
+                    assert loss is not None
+                with profile_region("train/backward", capture_regions):
+                    loss.backward()
+                with profile_region("train/optimizer", capture_regions):
+                    gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+                    optimizer.step()
+                    scheduler.step()
 
-        elapsed_seconds = time.perf_counter() - started_at
-        tokens_per_second = (step - completed_steps) * inputs.numel() / elapsed_seconds
-        metric = {
-            "step": step,
-            "train_loss": loss.item(),
-            "learning_rate": scheduler.get_last_lr()[0],
-            "gradient_norm": float(gradient_norm),
-            "tokens_per_second": tokens_per_second,
-            "elapsed_seconds": elapsed_seconds,
-        }
+                # Mark the next profiler interval; telemetry is sparse by default.
+                if profiler is not None:
+                    profiler.step()
+                first_step = step == completed_steps + 1
+                final_step = step == args.max_steps
+                evaluate_now = step % args.eval_interval == 0 or final_step
+                log_now = first_step or step % args.log_interval == 0 or evaluate_now
+                if log_now:
+                    if device.type == "cuda":
+                        torch.cuda.synchronize(device)
+                    elapsed_seconds = time.perf_counter() - started_at
+                    tokens_per_second = (step - completed_steps) * inputs.numel() / elapsed_seconds
+                    metric = {
+                        "step": step,
+                        "train_loss": loss.item(),
+                        "learning_rate": scheduler.get_last_lr()[0],
+                        "gradient_norm": float(gradient_norm),
+                        "tokens_per_second": tokens_per_second,
+                        "elapsed_seconds": elapsed_seconds,
+                    }
+                    if evaluate_now:
+                        metric["validation_loss"] = evaluate(model, val_loader, device, args.eval_batches)
+                        metric["sample"] = generate(
+                            model, tokenizer, args.sample_prompt, args.sample_tokens, device
+                        )
+                        print(
+                            f"step={step:>5} train_loss={metric['train_loss']:.4f} "
+                            f"val_loss={metric['validation_loss']:.4f} "
+                            f"tokens/sec={tokens_per_second:.0f}"
+                        )
+                        print(f"Sample:\n{metric['sample']}\n")
+                    metrics_file.write(json.dumps(metric) + "\n")
+                    metrics_file.flush()
 
-        if step % args.eval_interval == 0 or step == args.max_steps:
-            metric["validation_loss"] = evaluate(model, val_loader, device, args.eval_batches)
-            metric["sample"] = generate(
-                model, tokenizer, args.sample_prompt, args.sample_tokens, device
-            )
-            print(
-                f"step={step:>5} train_loss={metric['train_loss']:.4f} "
-                f"val_loss={metric['validation_loss']:.4f} "
-                f"tokens/sec={tokens_per_second:.0f}"
-            )
-            print(f"Sample:\n{metric['sample']}\n")
+                if weight_file is not None and (
+                    first_step or step % args.weight_log_interval == 0 or final_step
+                ):
+                    log_weights(weight_file, model, step, "updated", baseline)
 
-        with metrics_path.open("a", encoding="utf-8") as metrics_file:
-            metrics_file.write(json.dumps(metric) + "\n")
-
-        if step % args.checkpoint_interval == 0 or step == args.max_steps:
-            save_checkpoint(
-                args.checkpoint_dir / f"step-{step:06d}.pt",
-                model,
-                optimizer,
-                scheduler,
-                step,
-                args,
-            )
+                if step % args.checkpoint_interval == 0 or final_step:
+                    save_checkpoint(
+                        args.checkpoint_dir / f"step-{step:06d}.pt",
+                        model, optimizer, scheduler, step, args,
+                    )
 
 
 if __name__ == "__main__":
