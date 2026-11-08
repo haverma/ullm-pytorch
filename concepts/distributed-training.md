@@ -16,6 +16,26 @@ matrices), pipeline parallelism (splitting model layers into stages), and FSDP
 (sharding model state with communication to assemble what computation needs).
 This project implements DDP only.
 
+For the six Transformer blocks in our model, each DDP worker runs the complete
+chain on its own slice of the batch:
+
+```text
+One global batch: 32 sequences
+
+GPU 0: sequences  1–8  → block 1 → block 2 → ... → block 6 → loss/backward
+GPU 1: sequences  9–16 → block 1 → block 2 → ... → block 6 → loss/backward
+GPU 2: sequences 17–24 → block 1 → block 2 → ... → block 6 → loss/backward
+GPU 3: sequences 25–32 → block 1 → block 2 → ... → block 6 → loss/backward
+                                  ↓
+                  Synchronize gradients; update every replica
+```
+
+The four rows run concurrently. Within a row, a block needs the preceding
+block's output. DDP does not run block 1 and block 2 independently on the same
+examples. Pipeline parallelism can place different blocks on different GPUs,
+but overlaps stages by processing different microbatches: a later stage cannot
+process a particular microbatch before its input arrives from the earlier stage.
+
 ## Process, rank, device, and launcher
 
 A typical GPU DDP deployment uses one process per GPU. Each process runs the
@@ -134,6 +154,129 @@ also useful, but changes to its shuffle/padding behavior must be accounted for;
 epoch-based shuffling normally requires `set_epoch(epoch)`. DDP itself does
 not partition the input data.
 
+## Microbatches, accumulation, and synchronization
+
+This section summarizes the supplied side-chat discussion, including the
+correction where an example accidentally increased the effective batch from
+32 to 128. The numbers below consistently distinguish the two workloads.
+
+A **microbatch** is the group of examples processed by one GPU in one
+forward/backward pass. **Gradient accumulation** processes several microbatches
+sequentially before making one optimizer update. It reduces the activation
+memory needed at once for a fixed effective batch. It does not add simultaneous
+execution or require GPUs to exchange their input microbatches.
+
+| Setup | Sequences per GPU per microstep | GPUs | Microsteps per update | Effective global batch |
+|---|---:|---:|---:|---:|
+| DDP only, as measured | 8 | 4 | 1 | 32 |
+| DDP plus accumulation, same effective batch | 2 | 4 | 4 | 32 |
+| Different, larger-batch experiment | 8 | 4 | 4 | 128 |
+
+The last row changes the optimization workload. It must not be described as
+another way of processing the same original batch of 32.
+
+For the middle row, each letter below represents a microbatch of **two**
+sequences. All four GPUs work concurrently within each row; the rows execute
+successively:
+
+| Microstep | GPU 0 | GPU 1 | GPU 2 | GPU 3 |
+|---|---|---|---|---|
+| 1 | A | B | C | D |
+| 2 | E | F | G | H |
+| 3 | I | J | K | L |
+| 4 | M | N | O | P |
+
+Each GPU sees four new local microbatches, eight sequences in total. Across
+the group, 16 microbatches × two sequences = 32 sequences contribute to the
+update. They are not rotated between GPUs or deliberately replayed on every
+pass. Dataset examples can recur across epochs, and this project's adjacent
+token windows can overlap; “new microbatch” describes the next batch assignment,
+not a guarantee that every token in the corpus is unique.
+
+Model weights stay unchanged across those four forward/backward passes.
+Gradients accumulate in parameter `.grad` buffers; `optimizer.step()` changes
+the weights only after the accumulation group is complete. Backward normally
+releases each microbatch's computation graph, so accumulation need not retain
+all four activation graphs at once. Model/optimizer memory is still required.
+
+Two separate mechanisms combine the contributions:
+
+- **Gradient accumulation:** combines multiple sequential microsteps over time.
+- **DDP gradient synchronization:** combines contributions across ranks/GPUs.
+
+Synchronization is required for the normal DDP update; accumulation is optional.
+If each GPU can already process its eight-sequence share of batch 32, our
+single-microstep DDP setup needs no accumulation. Smaller microbatches may help
+memory constraints but introduce more passes and can reduce throughput.
+
+### When gradients communicate
+
+By default, DDP synchronizes gradients on every backward pass, even if the
+optimizer updates only once every four passes. Accumulation still works that
+way, but performs unnecessary communication. `no_sync()` can skip the first
+three synchronizations and synchronize the accumulated gradients on the fourth.
+DDP may begin that communication while the final backward is still computing.
+
+Illustrative code for **four equal-size microbatches per rank**, assuming the
+loss is a mean over equally weighted examples/tokens:
+
+```python
+from contextlib import nullcontext
+
+accumulation_steps = 4
+optimizer.zero_grad(set_to_none=True)
+
+for microstep in range(accumulation_steps):
+    inputs, targets = next_microbatch()  # Two sequences per GPU in this example
+    sync = microstep == accumulation_steps - 1
+    context = nullcontext() if sync else ddp.no_sync()
+    with context:  # Both forward and backward must be inside no_sync().
+        _, loss = ddp(inputs, targets)
+        (loss / accumulation_steps).backward()
+
+torch.nn.utils.clip_grad_norm_(ddp.parameters(), max_norm=1.0)
+optimizer.step()
+scheduler.step()
+```
+
+Dividing each mean loss by four retains the intended mean-gradient scale.
+Do not clear gradients, clip each microbatch separately, or advance the
+optimizer/scheduler after every microstep when the goal is one combined update.
+Handle incomplete accumulation groups and unequal token counts explicitly:
+blindly dividing by four would not give the intended weighting in every case.
+Every rank must follow a compatible microstep/collective schedule.
+
+This is teaching pseudocode, not an implemented option in `train_ddp.py`.
+Accumulation can approximate a full-batch update under these conditions, but
+different floating-point orders or batch-dependent model behavior can change
+the result; it should not be promised as universally bit-exact.
+
+### What does “1,000 iterations” mean?
+
+“Iteration” alone is ambiguous once accumulation is introduced. Use:
+
+- **Microstep:** one forward/backward pass on a local microbatch. In the table
+  above, a microstep round consists of one such pass on each of the four GPUs.
+- **Optimizer step:** one weight update after the required microstep rounds.
+
+For four GPUs, two sequences per GPU per microstep, and four microsteps per
+update:
+
+| Reported progress | Optimizer updates | Microsteps per GPU | Global sequence examples processed |
+|---|---:|---:|---:|
+| 1,000 microstep rounds | 250 | 1,000 | 8,000 |
+| 1,000 optimizer steps | 1,000 | 4,000 | 32,000 |
+
+At sequence length 128, these represent 1,024,000 and 4,096,000 training token
+positions respectively. The count refers to examples processed, not necessarily
+distinct examples across the dataset.
+
+For our completed experiment, **1,300 steps means 1,300 optimizer updates**.
+There is no accumulation, so each rank also runs 1,300 training microsteps.
+On four GPUs, eight sequences per rank per update gives 41,600 global sequence
+examples and 5,324,800 token positions. Validation and text generation do not
+count as training microsteps or optimizer updates.
+
 ## Why extra GPUs may not help much
 
 For fixed work, speedup is `single_runtime / distributed_runtime`, and scaling
@@ -198,3 +341,5 @@ does not implement elastic recovery or failure injection yet.
 Official references: [DDP design](https://docs.pytorch.org/docs/stable/notes/ddp.html),
 [DDP tutorial](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html),
 [distributed communication](https://docs.pytorch.org/docs/stable/distributed.html).
+For accumulation communication behavior, see the official
+[`DDP.no_sync()` reference](https://docs.pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel.no_sync).
