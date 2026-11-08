@@ -1,0 +1,8 @@
+{
+  "data_shards_match_legacy": true,
+  "batches_checked": 8,
+  "gradient_equivalence": true,
+  "max_gradient_absolute_error": 6.705522537231445e-07,
+  "single_loss": 10.880392074584961,
+  "ddp_loss": 10.880392074584961
+}

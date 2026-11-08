@@ -1,0 +1,37 @@
+[
+  {
+    "path": "runs/comparison-1300/ddp2-profile/profiler/rank-0/trace.json",
+    "bytes": 11974091,
+    "sha256": "c2f38dffe6d8d4f071a5958fc640e6865ae05c565ff1f3ac0b1e0d7a66b81b99"
+  },
+  {
+    "path": "runs/comparison-1300/ddp2-profile/profiler/rank-1/trace.json",
+    "bytes": 11974989,
+    "sha256": "8f446491093fe027ac0b20ed9f7e5fa30e36b9534d18b7b3694e20cc5c5cdc1a"
+  },
+  {
+    "path": "runs/comparison-1300/ddp4-profile/profiler/rank-0/trace.json",
+    "bytes": 11618309,
+    "sha256": "42c4a84f9f9c588f21bd22edca94bac838ce83c715ec70bc03b477cccbefa8c7"
+  },
+  {
+    "path": "runs/comparison-1300/ddp4-profile/profiler/rank-1/trace.json",
+    "bytes": 11572863,
+    "sha256": "95d1a449eea0aa2229c03426f1665ae99b7936fd9ec9b40375017927759df553"
+  },
+  {
+    "path": "runs/comparison-1300/ddp4-profile/profiler/rank-2/trace.json",
+    "bytes": 11568879,
+    "sha256": "d1cea2d85da2a749b886e97b83f5c84e3d04657838dfab4271dcb64cbab92539"
+  },
+  {
+    "path": "runs/comparison-1300/ddp4-profile/profiler/rank-3/trace.json",
+    "bytes": 11576703,
+    "sha256": "d276f895cbe4b9faaa5ca62d59e3663f76b02de688456ae65e6988302f519716"
+  },
+  {
+    "path": "runs/comparison-1300/single-profile/profiler/trace.json",
+    "bytes": 11150330,
+    "sha256": "ee47290294753c6dc510bb045417c5ad3db180d5d5e643502077f9b35fe65eb5"
+  }
+]

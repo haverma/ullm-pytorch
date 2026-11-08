@@ -1,0 +1,510 @@
+{
+  "aggregate": [
+    {
+      "world_size": 1,
+      "repeats": 3,
+      "local_batch_size": 32,
+      "wall_seconds_median": 19.2259538010112,
+      "wall_seconds_range": [
+        18.795372808002867,
+        19.29859513102565
+      ],
+      "loop_elapsed_before_final_eval_median": 17.87360761698801,
+      "tokens_per_second_median": 276958.95117151167,
+      "speedup": 1.0,
+      "scaling_efficiency": 1.0,
+      "gpu_seconds": 19.2259538010112,
+      "final_validation_loss_median": 3.60947790145874,
+      "peak_allocated_gib": 3.513258457183838,
+      "peak_reserved_gib": 4.263671875,
+      "runs": [
+        {
+          "run": "single",
+          "wall_seconds": 18.795372808002867,
+          "final_validation_loss": 3.60947790145874
+        },
+        {
+          "run": "single-repeat2",
+          "wall_seconds": 19.2259538010112,
+          "final_validation_loss": 3.60947790145874
+        },
+        {
+          "run": "single-repeat3",
+          "wall_seconds": 19.29859513102565,
+          "final_validation_loss": 3.60947790145874
+        }
+      ]
+    },
+    {
+      "world_size": 2,
+      "repeats": 3,
+      "local_batch_size": 16,
+      "wall_seconds_median": 17.395964628027286,
+      "wall_seconds_range": [
+        17.253665408003144,
+        17.61299123300705
+      ],
+      "loop_elapsed_before_final_eval_median": 13.790523478994146,
+      "tokens_per_second_median": 306093.9771871585,
+      "speedup": 1.1051961884330088,
+      "scaling_efficiency": 0.5525980942165044,
+      "gpu_seconds": 34.79192925605457,
+      "final_validation_loss_median": 3.6094332575798034,
+      "peak_allocated_gib": 2.9360532760620117,
+      "peak_reserved_gib": 4.51953125,
+      "runs": [
+        {
+          "run": "ddp2",
+          "wall_seconds": 17.61299123300705,
+          "final_validation_loss": 3.6094332575798034
+        },
+        {
+          "run": "ddp2-repeat2",
+          "wall_seconds": 17.395964628027286,
+          "final_validation_loss": 3.6094332575798034
+        },
+        {
+          "run": "ddp2-repeat3",
+          "wall_seconds": 17.253665408003144,
+          "final_validation_loss": 3.6094332575798034
+        }
+      ]
+    },
+    {
+      "world_size": 4,
+      "repeats": 3,
+      "local_batch_size": 8,
+      "wall_seconds_median": 18.66492021997692,
+      "wall_seconds_range": [
+        18.033618382993154,
+        18.80580089299474
+      ],
+      "loop_elapsed_before_final_eval_median": 13.134180973982438,
+      "tokens_per_second_median": 285283.8339111092,
+      "speedup": 1.0300581826454211,
+      "scaling_efficiency": 0.2575145456613553,
+      "gpu_seconds": 74.65968087990768,
+      "final_validation_loss_median": 3.609430432319641,
+      "peak_allocated_gib": 2.7443227767944336,
+      "peak_reserved_gib": 3.48046875,
+      "runs": [
+        {
+          "run": "ddp4",
+          "wall_seconds": 18.80580089299474,
+          "final_validation_loss": 3.609430432319641
+        },
+        {
+          "run": "ddp4-repeat2",
+          "wall_seconds": 18.033618382993154,
+          "final_validation_loss": 3.609430432319641
+        },
+        {
+          "run": "ddp4-repeat3",
+          "wall_seconds": 18.66492021997692,
+          "final_validation_loss": 3.609430432319641
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "path": "runs/comparison-1300/ddp2-profile/profiler/rank-0/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.797743200000001,
+      "gpu_kernel_ms_per_step": 6.516577,
+      "nccl_kernel_ms_per_step": 0.12596500000000002,
+      "nccl_kernel_time_fraction": 0.01932993349115648,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.6105776,
+        "train/transfer": 0.0937336,
+        "train/forward": 3.09719,
+        "train/backward": 8.3641124,
+        "train/optimizer": 2.478451
+      },
+      "top_kernels_ms": [
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          5.435547000000001
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          4.118652
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_64x64_8x5_nt_align1>(cutlass_80_simt_sgemm_64x64_8x5_nt_align1::Params)",
+          3.752693999999998
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          3.2023970000000004
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          1.537184
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.4650920000000005
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          1.1354869999999997
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          1.0710780000000004
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxForward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxForwardEpilogue>(float*, float const*, int)",
+          0.979935
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x32x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          0.9721929999999996
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/ddp2-profile/profiler/rank-1/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.7417072,
+      "gpu_kernel_ms_per_step": 8.498576400000001,
+      "nccl_kernel_ms_per_step": 2.0528899999999997,
+      "nccl_kernel_time_fraction": 0.241556927110757,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.6039592,
+        "train/transfer": 0.0897466,
+        "train/forward": 3.0080264000000003,
+        "train/backward": 8.439110399999999,
+        "train/optimizer": 2.4392074
+      },
+      "top_kernels_ms": [
+        [
+          "ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+          10.264449999999998
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          5.453473000000001
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          4.1228810000000005
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_64x64_8x5_nt_align1>(cutlass_80_simt_sgemm_64x64_8x5_nt_align1::Params)",
+          3.991587000000003
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          3.194241
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          1.536545
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.4635480000000005
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          1.130178
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          1.0795890000000001
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxForward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxForwardEpilogue>(float*, float const*, int)",
+          0.9768330000000001
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/ddp4-profile/profiler/rank-0/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.737128400000001,
+      "gpu_kernel_ms_per_step": 11.312699400000001,
+      "nccl_kernel_ms_per_step": 6.9745064,
+      "nccl_kernel_time_fraction": 0.6165200853829811,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.3557466,
+        "train/transfer": 0.6156026000000001,
+        "train/forward": 2.9599672000000004,
+        "train/backward": 8.231208999999998,
+        "train/optimizer": 2.4164386
+      },
+      "top_kernels_ms": [
+        [
+          "ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+          34.872532
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          3.198972
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          2.148157
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          2.1175049999999995
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          1.672158
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.2298859999999994
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          0.9919309999999999
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          0.9267110000000004
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          0.846592
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          0.7724119999999997
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/ddp4-profile/profiler/rank-1/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.9445724,
+      "gpu_kernel_ms_per_step": 4.426117,
+      "nccl_kernel_ms_per_step": 0.18369919999999998,
+      "nccl_kernel_time_fraction": 0.0415034668084915,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.35807200000000006,
+        "train/transfer": 0.0859602,
+        "train/forward": 3.1431461999999994,
+        "train/backward": 8.5912514,
+        "train/optimizer": 2.5842118
+      },
+      "top_kernels_ms": [
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          3.194368
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          2.144
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          2.109561
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          1.670207
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.2316809999999998
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          0.9787469999999999
+        ],
+        [
+          "ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+          0.9184959999999999
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          0.91194
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          0.8464010000000001
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          0.775072
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/ddp4-profile/profiler/rank-2/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.4409518,
+      "gpu_kernel_ms_per_step": 10.086216799999999,
+      "nccl_kernel_ms_per_step": 5.8019587999999995,
+      "nccl_kernel_time_fraction": 0.5752363760414113,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.358364,
+        "train/transfer": 0.2613776,
+        "train/forward": 2.9808984,
+        "train/backward": 8.2335792,
+        "train/optimizer": 2.4493802000000002
+      },
+      "top_kernels_ms": [
+        [
+          "ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+          29.009793999999996
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          3.187309
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          2.1443090000000002
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          2.1152550000000008
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          1.674134
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.2291759999999998
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          0.999161
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          0.9217259999999998
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          0.845533
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          0.7749659999999998
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/ddp4-profile/profiler/rank-3/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 14.4611216,
+      "gpu_kernel_ms_per_step": 9.595832799999993,
+      "nccl_kernel_ms_per_step": 5.312231599999999,
+      "nccl_kernel_time_fraction": 0.55359776589688,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 0.354027,
+        "train/transfer": 0.1350844,
+        "train/forward": 3.013027,
+        "train/backward": 8.3610172,
+        "train/optimizer": 2.4411034000000003
+      },
+      "top_kernels_ms": [
+        [
+          "ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+          26.561157999999995
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_256x128_8x4_nn_align1>(cutlass_80_simt_sgemm_256x128_8x4_nn_align1::Params)",
+          3.215179
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x64x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          2.1371919999999998
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          2.108839
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          1.671333
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          1.2276829999999996
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          0.988096
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          0.9191729999999999
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          0.842147
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_32x32x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          0.7749720000000001
+        ]
+      ]
+    },
+    {
+      "path": "runs/comparison-1300/single-profile/profiler/trace.json",
+      "captured_steps": 5,
+      "profiled_cpu_step_ms": 13.5242726,
+      "gpu_kernel_ms_per_step": 11.290232799999998,
+      "nccl_kernel_ms_per_step": 0.0,
+      "nccl_kernel_time_fraction": 0.0,
+      "cpu_region_ms_per_step": {
+        "train/load_batch": 1.006621,
+        "train/transfer": 0.7376886,
+        "train/forward": 2.8630488,
+        "train/backward": 6.3325674,
+        "train/optimizer": 2.41721
+      },
+      "top_kernels_ms": [
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_nnn_align1_bias_f32_relu",
+          9.902924
+        ],
+        [
+          "void cutlass::Kernel2<cutlass_80_simt_sgemm_64x64_8x5_nt_align1>(cutlass_80_simt_sgemm_64x64_8x5_nt_align1::Params)",
+          7.699312999999997
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_128x128x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          7.560879999999999
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_ntn_align1_bias_f32_relu",
+          6.266163000000001
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxBackward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxBackwardEpilogue>(float*, float const*, float const*, long)",
+          3.027257
+        ],
+        [
+          "fmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemEffAttention::AttentionBackwardKernel<cutlass::arch::Sm80, float, true, false, false, 64, 64, 32, false>::Params)",
+          2.278587
+        ],
+        [
+          "void at::native::(anonymous namespace)::cunn_SoftMaxForward<4, float, float, float, at::native::(anonymous namespace)::LogSoftMaxForwardEpilogue>(float*, float const*, int)",
+          1.8842530000000002
+        ],
+        [
+          "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x128x16_1x1x1_3_tnn_align1_bias_f32_relu",
+          1.7265200000000007
+        ],
+        [
+          "void at::native::(anonymous namespace)::GammaBetaBackwardCUDAKernelTemplate<float, float, 32u, 32u, 256u, false, true, false>(long, long, float const*, float const*, float const*, float const*, float*, float*)",
+          1.6811500000000008
+        ],
+        [
+          "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+          1.6633570000000002
+        ]
+      ]
+    }
+  ]
+}

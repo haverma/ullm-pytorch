@@ -1,5 +1,14 @@
 # ullm-pytorch
 
+For the single-GPU versus NCCL DDP experiment, see
+[distributed training and profiling](docs/distributed-training.md).
+The original `train.py` remains single-device; `train_ddp.py` is the separate
+distributed entry point, with `--batch-size` interpreted as the global batch.
+
+- [Concepts and theory](concepts/README.md)
+- [B200 comparison findings](docs/b200-scaling-results.md)
+- [Versioned experiment evidence](docs/experiments/b200-1300/README.md)
+
 ## Stage 1 — Build a small language-model training workload
 Duration: two Saturdays. Goal: own a complete, reproducible PyTorch training job that later stages can profile, distribute, containerize, break, and serve.
 Use one project only: a small decoder-only Transformer trained on a compact text corpus.
