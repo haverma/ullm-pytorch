@@ -1,7 +1,7 @@
 # B200 single-GPU performance and debugging findings
 
 The [single-GPU lab](../../experiments/single_gpu/README.md) completed on
-`ubuntu@151.106.165.224`, GPU 0. The audit verified 75 results: 70 completed
+`B200`, GPU 0. The audit verified 75 results: 70 completed
 normally, two intentionally OOMed, two detected injected NaNs, and one recorded
 the original resume failure before its fix. GPU workloads are finished.
 

@@ -1,6 +1,6 @@
 {
   "base_git_commit": "4672cbb",
-  "node": "ubuntu@151.106.165.224",
+  "node": "B200",
   "device": "CUDA_VISIBLE_DEVICES=0",
   "suite_environment": {
     "OMP_NUM_THREADS": "1",
