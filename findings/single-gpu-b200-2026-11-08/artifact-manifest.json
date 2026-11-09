@@ -1,0 +1,232 @@
+[
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/baseline-profile/trace.json",
+    "bytes": 11185734,
+    "sha256": "1c0557e989ee14fca0009d3adaed35172dfb4de5dcae0831c1be2f4314c4adae"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/bf16-profile/trace.json",
+    "bytes": 13540066,
+    "sha256": "94d696c0f7403a38b95534ba1d3a209285ac55f4acb653f1efa35b909a21f3d8"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/stall-fixed-profile/trace.json",
+    "bytes": 10061753,
+    "sha256": "1b021ac25d182fcd8a4c271de0ff6bbe354d8397dfdd1d2670c61ca5669b4863"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/stall-profile/trace.json",
+    "bytes": 11194698,
+    "sha256": "86aa8c3664e9e842f83e99c5e3ebb7e064a9aba7c3971c944f8f26aef0b42a17"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/generation-backend-auto/generation-trace.json",
+    "bytes": 28807314,
+    "sha256": "bea66a544fcbf620e036123b55fe50ef0ff2507fe883e28c7fa8fbb76cdd044b"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/generation-backend-no-cudnn/generation-trace.json",
+    "bytes": 30121033,
+    "sha256": "b75d4dab7fd6bcb88c471b48a4d7ab2354cd94336e2215db254987539de9afa4"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/generation-check/bf16-trace.json",
+    "bytes": 4388767,
+    "sha256": "0655ba12c5f0c3c1aae1416bd3c38f6315c96bb2575ebfe04e66323925b0cac2"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/generation-check/fp32-trace.json",
+    "bytes": 3665026,
+    "sha256": "2d7a521ed17901f9d0dd69f189710057c35bc62175dba743351611c3d3a0a982"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/detached-control/completed.pickle",
+    "bytes": 524193,
+    "sha256": "c746940cb2ba18f122c8c0264000734ef5fa61b17c4f8417e289472b1ea1a15c"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/oom-batch-1024/completed.pickle",
+    "bytes": 531209,
+    "sha256": "9d4821a49af41292b0fd681d7218e96e18f9a34283f81172104c0e5907d6eaaa"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/oom-batch-128/completed.pickle",
+    "bytes": 515453,
+    "sha256": "b32fff3b473064624deaceb9f49cbc0fe465e6ba6fd05723a2762b7315264f83"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/oom-batch-2048/oom.pickle",
+    "bytes": 150593,
+    "sha256": "906c65b1fbfb737fa7fcec2ae1a4c0e26751f2cf9e7994e6112f8d8a03373f15"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/oom-batch-512/completed.pickle",
+    "bytes": 498854,
+    "sha256": "f9a5c915272a58e39c92891c5807965ac5ee638f0574663f246e8a1916c73498"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/physical-oom-batch-2048/oom.pickle",
+    "bytes": 154779,
+    "sha256": "a0873bc3c88b5d5b76768f89bb24000f77eaa492ee28193e4dd5c928a7a285e2"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/retained-graphs/completed.pickle",
+    "bytes": 780270,
+    "sha256": "ee733dd9e233c8e237fcc87501bb01fd7305bb4fe7f5ce3abc1255fa9d56dead"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/retained-graphs-cleanup-fixed/completed.pickle",
+    "bytes": 780270,
+    "sha256": "f80f31fcdb68b4c7510cf725d549a0909ed3baf7218aee774b52be9a29a995fa"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/accumulation-8x4/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "ccd581ee7c46a3c9a5f0d735c0b5eb998a14a449cf741167d46fb92cec37cdf4"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/accumulation-and-checkpointing/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "ccd581ee7c46a3c9a5f0d735c0b5eb998a14a449cf741167d46fb92cec37cdf4"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/activation-checkpointing/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "1a7afe67db620bbe8f335d0c2bcbd79029c7156df8f559ef1a629457296eca6e"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-1024-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b70989e89aa22aa6858c7cf734a1231e579e7ba13f6474d310e76e56d755f07"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-1024-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b70989e89aa22aa6858c7cf734a1231e579e7ba13f6474d310e76e56d755f07"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-1024-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b70989e89aa22aa6858c7cf734a1231e579e7ba13f6474d310e76e56d755f07"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-128-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b14461ad0e391bcc9b845ee948e978439fca0a5cc1c0ecbcba8441c2f29ce95"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-128-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b14461ad0e391bcc9b845ee948e978439fca0a5cc1c0ecbcba8441c2f29ce95"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-128-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "0b14461ad0e391bcc9b845ee948e978439fca0a5cc1c0ecbcba8441c2f29ce95"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-256-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "b60428926e2bc4552f9c22c489524cd8bed51f1833c2f229276659c38c372430"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-256-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "b60428926e2bc4552f9c22c489524cd8bed51f1833c2f229276659c38c372430"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-256-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "b60428926e2bc4552f9c22c489524cd8bed51f1833c2f229276659c38c372430"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-32-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "3ac27f321272f12694a08ef89706fd916d7a7e2baf2ab6521c0ed73fd69b6efb"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-32-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "3ac27f321272f12694a08ef89706fd916d7a7e2baf2ab6521c0ed73fd69b6efb"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-32-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "3ac27f321272f12694a08ef89706fd916d7a7e2baf2ab6521c0ed73fd69b6efb"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-512-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "f0c84ba0231a4edccf7baab65d1bedbf1a1876ece0f04b03d0001d471940b681"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-512-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "f0c84ba0231a4edccf7baab65d1bedbf1a1876ece0f04b03d0001d471940b681"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-512-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "f0c84ba0231a4edccf7baab65d1bedbf1a1876ece0f04b03d0001d471940b681"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-64-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "92391ac345fa2f360f28b728e81d539b55cd6fc3201d49ea62bfb405d2eae14b"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-64-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "92391ac345fa2f360f28b728e81d539b55cd6fc3201d49ea62bfb405d2eae14b"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/batch-64-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "92391ac345fa2f360f28b728e81d539b55cd6fc3201d49ea62bfb405d2eae14b"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/bf16-baseline-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "818265431dffa86f55a11b6ccf5f058d9975b8b23fde7769802da3eae3a643a2"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/bf16-baseline-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "818265431dffa86f55a11b6ccf5f058d9975b8b23fde7769802da3eae3a643a2"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/bf16-baseline-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "818265431dffa86f55a11b6ccf5f058d9975b8b23fde7769802da3eae3a643a2"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/compiled-fp32/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "d3ca0bca1114bd954b63658cf289bdec17f162748d469badd6c229e480cebe3f"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/compiled-fp32-cached-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "c7dc6c9a82ba5f7be0069a196bd924718ea77b0ac76893de7092ceaf972db70d"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/compiled-fp32-cached-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "8655cf6b8a35e31f5bb93f3d2144856a125a05ee2e9df1d124deae91f2ec9f0b"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/fp32-baseline-r1/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "1a7afe67db620bbe8f335d0c2bcbd79029c7156df8f559ef1a629457296eca6e"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/fp32-baseline-r2/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "1a7afe67db620bbe8f335d0c2bcbd79029c7156df8f559ef1a629457296eca6e"
+  },
+  {
+    "path": "runs/single-gpu-b200-2026-11-08/fp32-baseline-r3/checkpoint.pt",
+    "bytes": 148227075,
+    "sha256": "1a7afe67db620bbe8f335d0c2bcbd79029c7156df8f559ef1a629457296eca6e"
+  }
+]

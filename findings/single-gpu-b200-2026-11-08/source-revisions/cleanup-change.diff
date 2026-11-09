@@ -1,0 +1,14 @@
+--- worker-before-cleanup.py
++++ worker.py
+@@ -320,8 +320,10 @@
+         result['allocated_before_cleanup'] = torch.cuda.memory_allocated()
+         retained.clear()
+         # Drop the final loss's reference to its retained graph as well.
+-        if 'loss' in locals():
++        try:
+             del loss
++        except UnboundLocalError:
++            pass
+         gc.collect()
+         torch.cuda.synchronize()
+         torch.cuda.empty_cache()

@@ -8,6 +8,8 @@ distributed entry point, with `--batch-size` interpreted as the global batch.
 - [Concepts and theory](concepts/README.md)
 - [B200 comparison findings](docs/b200-scaling-results.md)
 - [Versioned experiment evidence](docs/experiments/b200-1300/README.md)
+- [Single-GPU performance/debugging lab](experiments/single_gpu/README.md)
+- [Single-GPU B200 findings](findings/single-gpu-b200-2026-11-08/README.md)
 
 ## Stage 1 — Build a small language-model training workload
 Duration: two Saturdays. Goal: own a complete, reproducible PyTorch training job that later stages can profile, distribute, containerize, break, and serve.

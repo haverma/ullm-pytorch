@@ -1,0 +1,77 @@
+{
+  "all_expected_outcomes_verified": true,
+  "core_cases": 73,
+  "total_results": 75,
+  "identical_initial_parameter_hash": true,
+  "identical_model_and_data_source": true,
+  "gradient_checks": {
+    "reference_loss": 10.88000202178955,
+    "checks": [
+      {
+        "microbatch": 32,
+        "activation_checkpointing": false,
+        "loss": 10.88000202178955,
+        "max_gradient_absolute_error": 0.0
+      },
+      {
+        "microbatch": 8,
+        "activation_checkpointing": false,
+        "loss": 10.88000226020813,
+        "max_gradient_absolute_error": 7.748603820800781e-07
+      },
+      {
+        "microbatch": 32,
+        "activation_checkpointing": true,
+        "loss": 10.88000202178955,
+        "max_gradient_absolute_error": 0.0
+      },
+      {
+        "microbatch": 8,
+        "activation_checkpointing": true,
+        "loss": 10.88000226020813,
+        "max_gradient_absolute_error": 7.748603820800781e-07
+      }
+    ]
+  },
+  "compiled_comparisons": [
+    {
+      "name": "compiled-fp32",
+      "max_parameter_absolute_difference": 0.0005402492824941874,
+      "parameter_rms_difference": 2.5643719851624002e-06,
+      "validation_loss_absolute_difference": 2.0134449005393407e-05,
+      "first_loss_absolute_difference": 9.5367431640625e-07
+    },
+    {
+      "name": "compiled-fp32-cached-r2",
+      "max_parameter_absolute_difference": 0.0004076361656188965,
+      "parameter_rms_difference": 2.71742047016651e-06,
+      "validation_loss_absolute_difference": 2.1409988403497948e-05,
+      "first_loss_absolute_difference": 9.5367431640625e-07
+    },
+    {
+      "name": "compiled-fp32-cached-r3",
+      "max_parameter_absolute_difference": 0.0004118382930755615,
+      "parameter_rms_difference": 2.748574376838062e-06,
+      "validation_loss_absolute_difference": 2.150535583522739e-05,
+      "first_loss_absolute_difference": 9.5367431640625e-07
+    }
+  ],
+  "expected_failures": {
+    "oom-batch-2048": "oom",
+    "physical-oom-batch-2048": "oom",
+    "nan-loss": "nonfinite_detected",
+    "nan-gradient": "nonfinite_detected",
+    "resume-before-fix": "resume_failed"
+  },
+  "deterministic_resume": {
+    "reference_returncode": 0,
+    "resume_returncode": 0,
+    "status": "completed",
+    "parameters_bit_exact": true,
+    "parameter_max_abs_difference": 0.0,
+    "optimizer_bit_exact": true,
+    "scheduler_equal": true,
+    "rng_state_equal": true,
+    "completed_steps_equal": true
+  }
+}

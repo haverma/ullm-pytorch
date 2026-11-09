@@ -1,0 +1,337 @@
+"""One isolated, measured single-GPU experiment. See README.md for scope."""
+from __future__ import annotations
+
+import argparse
+import gc
+import hashlib
+import json
+import platform
+import statistics
+import sys
+import time
+import traceback
+from contextlib import nullcontext
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+import torch
+import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
+from torch.utils.data import DataLoader
+from torch.utils.data._utils.collate import default_collate
+
+import train
+from data import get_dataloader
+from model import TinyLM
+
+
+class LabLM(TinyLM):
+    """Same parameters/math as TinyLM; optional non-reentrant block recompute."""
+    activation_checkpointing = False
+
+    def forward(self, idx, targets=None):
+        b, t = idx.shape
+        pos = torch.arange(t, device=idx.device)
+        x = self.tok_emb(idx) + self.pos_emb(pos)
+        for block in self.blocks:
+            if self.activation_checkpointing and self.training and torch.is_grad_enabled():
+                x = checkpoint(block, x, use_reentrant=False)
+            else:
+                x = block(x)
+        logits = self.lm_head(self.ln_f(x))
+        loss = None if targets is None else F.cross_entropy(
+            logits.view(-1, self.vocab_size), targets.reshape(-1))
+        return logits, loss
+
+
+class Collate:
+    def __init__(self, delay_ms):
+        self.delay_ms = delay_ms
+
+    def __call__(self, batch):
+        if self.delay_ms:
+            time.sleep(self.delay_ms / 1000)
+        return default_collate(batch)
+
+
+class NonFinite(RuntimeError):
+    pass
+
+
+def arguments():
+    p = argparse.ArgumentParser()
+    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--steps', type=int, default=1300)
+    p.add_argument('--warmup', type=int, default=20)
+    p.add_argument('--batch-size', type=int, default=32, help='Effective batch per update')
+    p.add_argument('--microbatch', type=int, default=0)
+    p.add_argument('--seq-length', type=int, default=128)
+    p.add_argument('--precision', choices=['fp32', 'bf16'], default='fp32')
+    p.add_argument('--activation-checkpointing', action='store_true')
+    p.add_argument('--compile', action='store_true')
+    p.add_argument('--profile', action='store_true')
+    p.add_argument('--workers', type=int, default=0)
+    p.add_argument('--pin-memory', action='store_true')
+    p.add_argument('--nonblocking', action='store_true')
+    p.add_argument('--prefetch', type=int, default=2)
+    p.add_argument('--delay-ms', type=float, default=0)
+    p.add_argument('--eval-interval', type=int, default=100)
+    p.add_argument('--eval-batches', type=int, default=20)
+    p.add_argument('--generate-tokens', type=int, default=80)
+    p.add_argument('--save-checkpoint', action='store_true')
+    p.add_argument('--memory-fraction', type=float, default=1.0)
+    p.add_argument('--snapshot', action='store_true')
+    p.add_argument('--retain-graphs', action='store_true')
+    p.add_argument('--nan-step', type=int, default=0)
+    p.add_argument('--nan-gradient-step', type=int, default=0)
+    a = p.parse_args()
+    a.microbatch = a.microbatch or a.batch_size
+    if a.steps <= 0 or a.warmup < 0 or a.warmup >= a.steps:
+        p.error('Require 0 <= warmup < steps')
+    if a.batch_size % a.microbatch or a.microbatch <= 0:
+        p.error('Effective batch must be divisible by microbatch')
+    if a.eval_interval <= 0 or a.eval_batches < 0:
+        p.error('Invalid evaluation configuration')
+    return a
+
+
+def hash_parameters(model):
+    return hashlib.sha256(b''.join(
+        p.detach().cpu().numpy().tobytes() for p in model.parameters())).hexdigest()
+
+
+def snapshot(output, label):
+    """Keep raw snapshot separate; report a compact allocator summary as JSON."""
+    torch.cuda.memory._dump_snapshot(str(output / f'{label}.pickle'))
+    snap = torch.cuda.memory._snapshot()
+    segments = snap['segments']
+    return dict(segments=len(segments),
+                segment_bytes=sum(s['total_size'] for s in segments),
+                allocated_bytes=torch.cuda.memory_allocated(),
+                reserved_bytes=torch.cuda.memory_reserved(),
+                largest_segment_bytes=max((s['total_size'] for s in segments), default=0))
+
+
+def run(a):
+    start = time.perf_counter()
+    a.output.mkdir(parents=True, exist_ok=False)
+    torch.set_num_threads(1)
+    torch.cuda.set_device(0)
+    torch.set_float32_matmul_precision('highest')
+    torch.cuda.memory.set_per_process_memory_fraction(a.memory_fraction)
+    if a.snapshot:
+        torch.cuda.memory._record_memory_history(max_entries=2000)
+    train.seed_everything(42)
+    original = get_dataloader('train', a.batch_size, a.seq_length, 0, 42)
+    kwargs = dict(dataset=original.dataset, batch_sampler=original.batch_sampler,
+                  generator=original.generator, num_workers=a.workers,
+                  pin_memory=a.pin_memory, collate_fn=Collate(a.delay_ms))
+    if a.workers:
+        kwargs.update(prefetch_factor=a.prefetch, persistent_workers=True)
+    loader = DataLoader(**kwargs)
+    val_loader = get_dataloader('val', 32, a.seq_length, 0, 42)
+    model = LabLM(max_seq_len=a.seq_length).cuda()
+    model.activation_checkpointing = a.activation_checkpointing
+    initial_hash = hash_parameters(model)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.1)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=a.steps)
+    compute = torch.compile(model, fullgraph=True) if a.compile else model
+    def autocast():
+        return torch.autocast('cuda', dtype=torch.bfloat16, enabled=a.precision == 'bf16')
+    def region(name):
+        return torch.profiler.record_function(name) if a.profile else nullcontext()
+    events, memory, metrics, retained = [], [], [], []
+    iterator = iter(loader)
+    phase_times = dict(evaluation_seconds=0.0, generation_seconds=0.0,
+                       checkpoint_seconds=0.0, training_wall_seconds=0.0)
+    result = dict(status='running', config={k: str(v) if isinstance(v, Path) else v
+                                          for k, v in vars(a).items()},
+                  initial_parameter_sha256=initial_hash, parameter_count=sum(p.numel() for p in model.parameters()),
+                  environment=dict(host=platform.node(), python=platform.python_version(),
+                                   torch=torch.__version__, cuda=torch.version.cuda,
+                                   gpu=torch.cuda.get_device_name(),
+                                   total_memory_bytes=torch.cuda.get_device_properties(0).total_memory),
+                  source_sha256={n: hashlib.sha256((ROOT / n).read_bytes()).hexdigest()
+                                 for n in ('model.py', 'data.py', 'train.py',
+                                           'experiments/single_gpu/worker.py')})
+    def save_profile(p):
+        p.export_chrome_trace(str(a.output / 'trace.json'))
+        (a.output / 'operators.txt').write_text(p.key_averages().table(
+            sort_by='self_cuda_time_total', row_limit=40))
+    profile = torch.profiler.profile(
+        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+        schedule=torch.profiler.schedule(wait=20, warmup=2, active=5, repeat=1),
+        on_trace_ready=save_profile, record_shapes=True, profile_memory=True
+    ) if a.profile else nullcontext(None)
+    torch.cuda.reset_peak_memory_stats()
+    torch.cuda.synchronize()
+    training_start = time.perf_counter()
+    segment_start = training_start if a.warmup == 0 else None
+    status = 'completed'
+    failure = None
+    first_step_wall = None
+    try:
+        with profile as prof:
+            for step in range(1, a.steps + 1):
+                step_start = time.perf_counter()
+                with region('train/load_batch'):
+                    try:
+                        inputs, targets = next(iterator)
+                    except StopIteration:
+                        iterator = iter(loader)
+                        inputs, targets = next(iterator)
+                phases = {}
+                def event_start(name):
+                    pair = (torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True))
+                    pair[0].record()
+                    phases[name] = pair
+                def event_end(name):
+                    phases[name][1].record()
+                event_start('step')
+                optimizer.zero_grad(set_to_none=True)
+                loss_total = torch.zeros((), device='cuda')
+                accumulation = a.batch_size // a.microbatch
+                for offset in range(0, a.batch_size, a.microbatch):
+                    event_start(f'transfer-{offset}')
+                    with region('train/transfer'):
+                        x = inputs[offset:offset+a.microbatch].to('cuda', non_blocking=a.nonblocking)
+                        y = targets[offset:offset+a.microbatch].to('cuda', non_blocking=a.nonblocking)
+                    event_end(f'transfer-{offset}')
+                    event_start(f'forward-{offset}')
+                    with region('train/forward'), autocast():
+                        logits, loss = compute(x, y)
+                        if step == a.nan_step:
+                            loss = loss * float('nan')
+                    event_end(f'forward-{offset}')
+                    if a.nan_step or a.nan_gradient_step:
+                        if not torch.isfinite(loss).item():
+                            failure = dict(step=step, phase='loss_before_backward')
+                            raise NonFinite('Non-finite loss detected before backward/update')
+                    loss_total += loss.detach() / accumulation
+                    event_start(f'backward-{offset}')
+                    with region('train/backward'):
+                        (loss / accumulation).backward(retain_graph=a.retain_graphs)
+                    event_end(f'backward-{offset}')
+                    if a.retain_graphs:
+                        retained.append(loss)
+                    # Do not retain a large previous output across the next forward.
+                    del logits
+                if step == a.nan_gradient_step:
+                    next(model.parameters()).grad.view(-1)[0] = float('nan')
+                if a.nan_step or a.nan_gradient_step:
+                    for name, parameter in model.named_parameters():
+                        if parameter.grad is not None and not torch.isfinite(parameter.grad).all().item():
+                            failure = dict(step=step, phase='gradient_before_clipping', parameter=name)
+                            raise NonFinite('Non-finite gradient detected before optimizer update')
+                event_start('optimizer')
+                with region('train/optimizer'):
+                    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    optimizer.step()
+                    scheduler.step()
+                event_end('optimizer')
+                event_end('step')
+                events.append(phases)
+                if step == 1:
+                    torch.cuda.synchronize()
+                    first_step_wall = time.perf_counter() - step_start
+                    result['first_training_loss'] = loss_total.item()
+                memory.append(dict(step=step, allocated_bytes=torch.cuda.memory_allocated(),
+                                   reserved_bytes=torch.cuda.memory_reserved()))
+                if prof:
+                    prof.step()
+                if step == a.warmup:
+                    torch.cuda.synchronize()
+                    result['warmup_wall_seconds'] = time.perf_counter() - training_start
+                    segment_start = time.perf_counter()
+                evaluate_now = a.eval_batches > 0 and (step % a.eval_interval == 0 or step == a.steps)
+                final = step == a.steps
+                if evaluate_now or final:
+                    torch.cuda.synchronize()
+                    if segment_start is not None:
+                        phase_times['training_wall_seconds'] += time.perf_counter() - segment_start
+                    row = dict(step=step, train_loss=loss_total.item(), gradient_norm=float(norm),
+                               learning_rate=scheduler.get_last_lr()[0])
+                    if evaluate_now:
+                        tick = time.perf_counter()
+                        with autocast():
+                            row['validation_loss'] = train.evaluate(model, val_loader,
+                                                                    torch.device('cuda'), a.eval_batches)
+                        torch.cuda.synchronize()
+                        phase_times['evaluation_seconds'] += time.perf_counter() - tick
+                        if a.generate_tokens:
+                            import tiktoken
+                            tick = time.perf_counter()
+                            with autocast():
+                                train.generate(model, tiktoken.get_encoding('gpt2'), 'ROMEO:',
+                                               a.generate_tokens, torch.device('cuda'))
+                            torch.cuda.synchronize()
+                            phase_times['generation_seconds'] += time.perf_counter() - tick
+                    metrics.append(row)
+                    print(json.dumps(row), flush=True)
+                    if final and a.save_checkpoint:
+                        tick = time.perf_counter()
+                        torch.save(dict(model_state=model.state_dict(), optimizer_state=optimizer.state_dict(),
+                                        scheduler_state=scheduler.state_dict(), completed_steps=step,
+                                        rng_state=train.capture_rng_state()), a.output / 'checkpoint.pt')
+                        phase_times['checkpoint_seconds'] += time.perf_counter() - tick
+                    segment_start = time.perf_counter() if step >= a.warmup else None
+    except torch.OutOfMemoryError as error:
+        status = 'oom'
+        failure = dict(step=step, phase='training_allocation', exception=str(error),
+                       traceback=traceback.format_exc())
+    except NonFinite as error:
+        status = 'nonfinite_detected'
+        failure.update(exception=str(error))
+    except Exception:
+        status = 'error'
+        failure = dict(traceback=traceback.format_exc())
+    torch.cuda.synchronize()
+    result.update(status=status, failure=failure, first_step_wall_seconds=first_step_wall,
+                  wall_seconds=time.perf_counter() - start,
+                  peak_allocated_bytes=torch.cuda.max_memory_allocated(),
+                  peak_reserved_bytes=torch.cuda.max_memory_reserved(),
+                  metrics=metrics, memory_series=memory, **phase_times)
+    if a.snapshot:
+        result['snapshot'] = snapshot(a.output, status)
+        (a.output / 'memory-summary.txt').write_text(torch.cuda.memory_summary())
+        torch.cuda.memory._record_memory_history(enabled=None)
+    if status == 'completed':
+        timed = events[a.warmup:]
+        def durations(prefix):
+            return [sum(pair[0].elapsed_time(pair[1]) for name, pair in e.items()
+                        if name == prefix or name.startswith(prefix+'-')) for e in timed]
+        result['gpu_event_ms'] = {
+            name: dict(median=statistics.median(v := durations(name)),
+                       p95=sorted(v)[min(len(v)-1, int(len(v)*0.95))])
+            for name in ('step', 'transfer', 'forward', 'backward', 'optimizer')}
+        result['timed_optimizer_steps'] = len(timed)
+        result['timed_training_tokens_per_second'] = (
+            len(timed)*a.batch_size*a.seq_length / phase_times['training_wall_seconds'])
+        result['total_training_tokens'] = a.steps*a.batch_size*a.seq_length
+        result['final_parameter_sha256'] = hash_parameters(model)
+        result['final_validation_loss'] = metrics[-1].get('validation_loss') if metrics else None
+        if a.compile:
+            from torch._dynamo.utils import counters
+            result['compiler_counters'] = {str(k): dict(v) for k,v in counters.items()}
+    if a.retain_graphs:
+        result['retained_graphs'] = len(retained)
+        result['allocated_before_cleanup'] = torch.cuda.memory_allocated()
+        retained.clear()
+        # Drop the final loss's reference to its retained graph as well.
+        try:
+            del loss
+        except UnboundLocalError:
+            pass
+        gc.collect()
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+        result['allocated_after_cleanup'] = torch.cuda.memory_allocated()
+    (a.output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps({k:v for k,v in result.items() if k not in ('memory_series','metrics')}, indent=2), flush=True)
+    return 1 if status == 'error' else 0
+
+
+if __name__ == '__main__':
+    sys.exit(run(arguments()))

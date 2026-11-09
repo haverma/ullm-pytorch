@@ -160,7 +160,9 @@ def restore_checkpoint(
     scheduler: torch.optim.lr_scheduler.LRScheduler,
     device: torch.device,
 ) -> int:
-    checkpoint = torch.load(path, map_location=device, weights_only=False)
+    # RNG byte tensors must remain on CPU. Loading everything onto CUDA breaks
+    # torch.set_rng_state(); model/optimizer loaders place their state correctly.
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     model.load_state_dict(checkpoint["model_state"])
     optimizer.load_state_dict(checkpoint["optimizer_state"])
     scheduler.load_state_dict(checkpoint["scheduler_state"])

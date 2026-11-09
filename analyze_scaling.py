@@ -8,7 +8,10 @@ from pathlib import Path
 
 def profile_summary(path):
     events = json.loads(path.read_text())['traceEvents']
-    steps = [e for e in events if e.get('name', '').startswith('ProfilerStep#') and 'dur' in e]
+    # CUDA can emit a GPU annotation with the same name as each CPU step.
+    # Count logical CPU steps once, not both copies of the annotation.
+    steps = [e for e in events if e.get('name', '').startswith('ProfilerStep#')
+             and e.get('cat') == 'user_annotation' and 'dur' in e]
     kernels = [e for e in events if e.get('cat') == 'kernel' and 'dur' in e]
     durations = collections.defaultdict(float)
     for e in kernels:

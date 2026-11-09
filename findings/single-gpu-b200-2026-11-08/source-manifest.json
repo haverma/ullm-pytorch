@@ -1,0 +1,19 @@
+{
+  "README.md": "02cf0a4806951c30d1297a20839d584a9a8b885ae1a1d0ad5e7a436011df2a9d",
+  "analyze_scaling.py": "f99d3e5629b29c641d8dd386bb32c4e647a40375a66f54d217a45fd4d1c0acb4",
+  "data.py": "10c6bf5846740ec3d409d51e1e5c891f17e20715c0e53b5c08be143ce80d3407",
+  "experiments/single_gpu/README.md": "818cbb6e015c484a45bb58be24d624ed23c0f45ffe54ba88f2e39e263f52f17f",
+  "experiments/single_gpu/analyze.py": "d366057e5170049dc20c9ef68436f7975e3ee04c44097cbfb302a92dc26c3b04",
+  "experiments/single_gpu/checks.py": "8665c6e82dff211e1cc993efcf99e5ae81f4f678c32f474d981780bb13708f70",
+  "experiments/single_gpu/generation_backend.py": "8bac2470bccf32cdf6addaf36d1bc531e95c3b976c46106f87b74d198d6cc04c",
+  "experiments/single_gpu/generation_check.py": "1b2708ef1d7b526a6f3fd92b6cf963ffc285c97a3aaa34ebc765552d7db2f30e",
+  "experiments/single_gpu/plot.py": "02fadddb5f5e321ab238ce0776d33c24da8fa5de5d8206fbcf88b96d5930192d",
+  "experiments/single_gpu/resume_check.py": "81508bdb608dc48d3f8f47645b37c720d834418d5e1227a197834d11296d05af",
+  "experiments/single_gpu/run_all.sh": "1ba0969a67cf258e081398a1a4b6bccc9b55eac33bd658d5641c987e1feeefe1",
+  "experiments/single_gpu/suite.py": "0d63ecf15600f3bb7853b9b125dc1883773ef5d6c8664410894abc8047c7423e",
+  "experiments/single_gpu/verify.py": "530c421db0ab88c69fd5425badb1a90b2a1327b05f844e3c9bd93828461e3100",
+  "experiments/single_gpu/worker.py": "098632f132c8f2a411c5829c1915a6f22fbfebc356ef2d372648c266f7b6ef48",
+  "model.py": "b33e9f1d3b33670ad9a593204c0d848bd927acd216b3d206320f8db41db68de4",
+  "requirements.lock.txt": "05b30c9ac5287c54ffb69fdb738846c122e161146c4a99382c31bbb419e34217",
+  "train.py": "dce0492849d289393bd951b9669fb8721d425704929b577b5c45b9995b4bb365"
+}
